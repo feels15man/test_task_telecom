@@ -96,11 +96,6 @@
       ansible.builtin.debug:
         msg: "The container {{ 'exists' if result.exists else 'does not exist' }}"
 
-    - name: Get exit code
-      command: docker wait {{ default_container_name }}
-      register: container_exit_code
-      changed_when: false
-
     - name: Check exit code
       assert:
         that:
