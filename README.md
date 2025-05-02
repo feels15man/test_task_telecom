@@ -7,5 +7,9 @@ test task for telecom team
 ## Task2 - работа с Docker
 Составил простой Dockerfile. Для сборки образа из корневой директории запустить `docker build -t app -f task_2/Dockerfile .`.
 
-Для запуска контейнера `docker run app`.
+Для запуска контейнера `docker run --name python_app app`.
+
+Для просмотра логов контейнера можно использовать `docker logs python_app`
+
+
 
