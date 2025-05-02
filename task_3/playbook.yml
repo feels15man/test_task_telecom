@@ -1,0 +1,119 @@
+- name: Set up docker with my app 
+  hosts: ubuntu
+  become: true
+  vars:
+    default_container_name: app
+    default_container_image: my_simple_python_app
+  tasks:
+    - name: Install apt
+      apt:
+        name: aptitude
+        state: latest
+        update_cache: true  
+
+    - name: Install required system packages
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: latest
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: true
+    
+    - name: Start docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Module for Python
+      pip:
+        name: docker
+
+    - name: Add user to docker
+      user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: true
+
+    - name: Creates directory /app
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "/app/task_1"
+        - "/app/task_2"
+
+    - name: Move Dockerfile
+      copy:
+          src: "../task_2/Dockerfile"
+          dest: "/app/task_2/Dockerfile"
+
+    - name: Move script
+      copy:
+          src: "../task_1/script.py"
+          dest: "/app/task_1/script.py"
+
+    - name: Build image
+      community.docker.docker_image:
+        name: "{{ default_container_image }}"
+        build:
+          path: "/app"
+          dockerfile: "task_2/Dockerfile"
+        source: build
+
+    - name: Run container
+      community.docker.docker_container:
+        name: "{{ default_container_name }}"
+        image: "{{ default_container_image }}"
+
+    - name: Get infos on container
+      community.docker.docker_container_info:
+        name: "{{ default_container_name }}"
+      register: result
+
+    - name: Does container exist?
+      ansible.builtin.debug:
+        msg: "The container {{ 'exists' if result.exists else 'does not exist' }}"
+
+    - name: Get exit code
+      command: docker wait {{ default_container_name }}
+      register: container_exit_code
+      changed_when: false
+
+    - name: Check exit code
+      assert:
+        that:
+          - result.container.State.ExitCode|int == 0
+        fail_msg: "Error in container runtime occured; exit code = {{ result.container.State.ExitCode }}"
+        success_msg: "Script works properly; exit code = 0"
+
+    - name: Read container logs
+      command: docker logs --tail 10 {{ default_container_name }}
+      register: container_logs
+      changed_when: false
+      failed_when: false
+
+    - name: Print Conatainer logs
+      debug:
+        msg: "{{ container_logs.stdout_lines }}"

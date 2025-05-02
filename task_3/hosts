@@ -1,0 +1,8 @@
+[servers]
+
+ubuntu ansible_host=192.168.128.129
+
+[all:vars]
+
+ansible_python_interpreter=/usr/bin/python3
+ansible_user=ilya
